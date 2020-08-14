@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Image, ScrollView } from 'react-native';
+import { Image, ScrollView, Alert } from 'react-native';
 
 import Icon from 'react-native-vector-icons/Feather';
 import { useNavigation } from '@react-navigation/native';
@@ -55,11 +55,38 @@ const Dashboard: React.FC = () => {
 
   async function handleNavigate(id: number): Promise<void> {
     // Navigate do ProductDetails page
+    navigation.navigate('FoodDetails', {
+      id,
+    });
+  }
+
+  function formatFoodItems(items: Food[]): Food[] {
+    return items.map(item => {
+      const formattedItem: Food = {
+        ...item,
+        formattedPrice: formatValue(item.price),
+      };
+      return formattedItem;
+    });
   }
 
   useEffect(() => {
     async function loadFoods(): Promise<void> {
-      // Load Foods from API
+      if (selectedCategory) {
+        api
+          .get(
+            `/foods?category_like=${selectedCategory}&name_like=${searchValue}`,
+          )
+          .then(response => {
+            const formattedFoods = formatFoodItems(response.data);
+            setFoods(formattedFoods);
+          });
+      } else {
+        api.get(`/foods?name_like=${searchValue}`).then(response => {
+          const formattedFoods = formatFoodItems(response.data);
+          setFoods(formattedFoods);
+        });
+      }
     }
 
     loadFoods();
@@ -68,6 +95,9 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     async function loadCategories(): Promise<void> {
       // Load categories from API
+      api.get('/categories').then(response => {
+        setCategories(response.data);
+      });
     }
 
     loadCategories();
@@ -75,6 +105,13 @@ const Dashboard: React.FC = () => {
 
   function handleSelectCategory(id: number): void {
     // Select / deselect category
+    const categoryIndex = categories.findIndex(cat => cat.id === id);
+
+    if (categoryIndex !== -1 && selectedCategory !== id) {
+      setSelectedCategory(categories[categoryIndex].id);
+    } else {
+      setSelectedCategory(undefined);
+    }
   }
 
   return (
